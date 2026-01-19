@@ -31,7 +31,7 @@ def toggle_env(mode, ref="softserial-killer"):
                 if mode == "local":
                     packages_block = f"""packages:
   # remote_package:
-  #   url: https://github.com/ratgdo/esphome-ratgdo
+  #   url: https://github.com/iclanton/esphome-ratgdo
   #   ref: {ref}
   #   files: [{base_file}]
   #   refresh: 1s
@@ -40,7 +40,7 @@ def toggle_env(mode, ref="softserial-killer"):
                 else:
                     packages_block = f"""packages:
   remote_package:
-    url: https://github.com/ratgdo/esphome-ratgdo
+    url: https://github.com/iclanton/esphome-ratgdo
     ref: {ref}
     files: [{base_file}]
     refresh: 1s
@@ -61,7 +61,7 @@ def toggle_env(mode, ref="softserial-killer"):
                 ext_block = f"""external_components:
   # - source:
   #     type: git
-  #     url: https://github.com/ratgdo/esphome-ratgdo
+  #     url: https://github.com/iclanton/esphome-ratgdo
   #     ref: {ref}
   #   refresh: 1s
   - source:
@@ -71,7 +71,7 @@ def toggle_env(mode, ref="softserial-killer"):
                 ext_block = f"""external_components:
   - source:
       type: git
-      url: https://github.com/ratgdo/esphome-ratgdo
+      url: https://github.com/iclanton/esphome-ratgdo
       ref: {ref}
     refresh: 1s
   # - source:

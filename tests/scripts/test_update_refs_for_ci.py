@@ -84,13 +84,59 @@ class TestGetPRInfo:
 class TestUpdateRefs:
     """Test the main update functionality."""
 
+    @pytest.mark.parametrize(
+        ("board_file", "base_file"),
+        [
+            ("v25iboard_enc.yaml", "base_enc.yaml"),
+            ("v25iboard_secplusv1_enc.yaml", "base_secplusv1_enc.yaml"),
+            ("v32board_enc.yaml", "base_enc.yaml"),
+            ("v32board_secplusv1_enc.yaml", "base_secplusv1_enc.yaml"),
+            ("v32disco_enc.yaml", "base_enc.yaml"),
+            ("v32disco_secplusv1_enc.yaml", "base_secplusv1_enc.yaml"),
+        ],
+    )
+    def test_encoder_configs_use_fork_and_localize_for_ci(
+        self, tmp_path, board_file, base_file
+    ):
+        repo_root = Path(__file__).resolve().parents[2]
+        board_content = (repo_root / board_file).read_text()
+        assert (
+            f"package_import_url: github://{update_refs_for_ci.RATGDO_REPO}/{board_file}@main"
+            in board_content
+        )
+
+        board_path = tmp_path / board_file
+        base_path = tmp_path / base_file
+        board_path.write_text(board_content)
+        base_path.write_text((repo_root / base_file).read_text())
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "GITHUB_ACTIONS": "true",
+                "GITHUB_WORKSPACE": str(tmp_path),
+                "GITHUB_REF": "refs/heads/test-encoder-configs",
+            },
+        ):
+            assert update_refs_for_ci.main() == 0
+
+        updated_board = board_path.read_text()
+        assert f"- !include {tmp_path}/{base_file}" in updated_board
+        assert "\n  remote_package:" not in updated_board
+        assert "dashboard_import:" not in updated_board
+
+        updated_base = base_path.read_text()
+        assert "type: local" in updated_base
+        assert f"path: {tmp_path}/components" in updated_base
+        assert "type: git" not in updated_base
+
     def test_github_actions_workspace_path(self, tmp_path):
         """Test that GITHUB_ACTIONS uses GITHUB_WORKSPACE for project root."""
         yaml_content = """
 external_components:
   - source:
       type: git
-      url: https://github.com/ratgdo/esphome-ratgdo
+      url: https://github.com/iclanton/esphome-ratgdo
       ref: main
     refresh: 1s
 """
@@ -120,7 +166,7 @@ external_components:
 external_components:
   - source:
       type: git
-      url: https://github.com/ratgdo/esphome-ratgdo
+      url: https://github.com/iclanton/esphome-ratgdo
       ref: main
     refresh: 1s
 """
@@ -139,7 +185,7 @@ external_components:
         assert "type: local" in updated_content
         assert f"path: {tmp_path}/components" in updated_content
         assert "type: git" not in updated_content
-        assert "url: https://github.com/ratgdo/esphome-ratgdo" not in updated_content
+        assert "url: https://github.com/iclanton/esphome-ratgdo" not in updated_content
         assert "ref: main" not in updated_content
 
     def test_update_remote_package_to_local_include(self, tmp_path):
@@ -147,7 +193,7 @@ external_components:
         yaml_content = """
 packages:
   remote_package:
-    url: https://github.com/ratgdo/esphome-ratgdo
+    url: https://github.com/iclanton/esphome-ratgdo
     ref: main
     files: [base.yaml]
     refresh: 1s
@@ -166,14 +212,14 @@ packages:
         assert "packages:" in updated_content
         assert f"- !include {tmp_path}/base.yaml" in updated_content
         assert "remote_package:" not in updated_content
-        assert "url: https://github.com/ratgdo/esphome-ratgdo" not in updated_content
+        assert "url: https://github.com/iclanton/esphome-ratgdo" not in updated_content
         assert "ref: main" not in updated_content
 
     def test_remove_dashboard_import_package_url(self, tmp_path):
         """Test removing package_import_url from dashboard_import."""
         yaml_content = """
 dashboard_import:
-  package_import_url: github://ratgdo/esphome-ratgdo/v2board.yaml@main
+  package_import_url: github://iclanton/esphome-ratgdo/v2board.yaml@main
 """
         yaml_file = tmp_path / "test.yaml"
         yaml_file.write_text(yaml_content)
@@ -195,16 +241,16 @@ dashboard_import:
 external_components:
   - source:
       type: git
-      url: https://github.com/ratgdo/esphome-ratgdo
+      url: https://github.com/iclanton/esphome-ratgdo
       ref: main
     refresh: 1s
 
 dashboard_import:
-  package_import_url: github://ratgdo/esphome-ratgdo/v25board.yaml@main
+  package_import_url: github://iclanton/esphome-ratgdo/v25board.yaml@main
 
 packages:
   remote_package:
-    url: https://github.com/ratgdo/esphome-ratgdo
+    url: https://github.com/iclanton/esphome-ratgdo
     ref: main
     files: [base.yaml]
     refresh: 1s
@@ -231,7 +277,7 @@ packages:
         assert f"- !include {tmp_path}/base.yaml" in updated_content
         assert "remote_package:" not in updated_content
         # Ensure no GitHub URLs remain for external_components
-        assert updated_content.count("github.com/ratgdo/esphome-ratgdo") == 0
+        assert updated_content.count("github.com/iclanton/esphome-ratgdo") == 0
 
     def test_preserve_esphome_tags(self, tmp_path):
         """Test that ESPHome-specific tags are preserved."""
@@ -239,7 +285,7 @@ packages:
 external_components:
   - source:
       type: git
-      url: https://github.com/ratgdo/esphome-ratgdo
+      url: https://github.com/iclanton/esphome-ratgdo
       ref: main
 
 button:
