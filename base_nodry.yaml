@@ -1,0 +1,201 @@
+---
+# Base config without dry contact and status pins
+esphome:
+  min_version: 2025.7.0
+
+external_components:
+  - source:
+      type: git
+      url: https://github.com/ratgdo/esphome-ratgdo
+      ref: main
+    refresh: 1s
+
+safe_mode:
+
+preferences:
+  flash_write_interval: 1min
+
+text_sensor:
+  - platform: version
+    id: ${id_prefix}_firmware_version
+    name: "Firmware Version"
+
+ratgdo:
+  id: ${id_prefix}
+  input_gdo_pin: ${uart_rx_pin}
+  output_gdo_pin: ${uart_tx_pin}
+  input_obst_pin: ${input_obst_pin}
+  on_sync_failed:
+    then:
+      - homeassistant.service:
+          service: persistent_notification.create
+          data:
+            title: "${friendly_name} sync failed"
+            message: "Failed to communicate with garage opener on startup."
+            notification_id: "esphome_ratgdo_${id_prefix}_sync_failed"
+
+api:
+  services:
+    - service: wipe_devices_from_gdo_memory
+      variables:
+        devices_to_wipe: string
+      then:
+        - lambda: !lambda |-
+            if(devices_to_wipe.compare("all") == 0) {
+              id($id_prefix).clear_paired_devices(ratgdo::PairedDevice::ALL);
+            } else if (devices_to_wipe.compare("remote") == 0) {
+              id($id_prefix).clear_paired_devices(ratgdo::PairedDevice::REMOTE);
+            } else if (devices_to_wipe.compare("keypad") == 0) {
+              id($id_prefix).clear_paired_devices(ratgdo::PairedDevice::KEYPAD);
+            } else if (devices_to_wipe.compare("wall") == 0)  {
+              id($id_prefix).clear_paired_devices(ratgdo::PairedDevice::WALL_CONTROL);
+            } else if (devices_to_wipe.compare("accessory")  == 0) {
+              id($id_prefix).clear_paired_devices(ratgdo::PairedDevice::ACCESSORY);
+            }
+
+ota:
+  - platform: esphome
+    id: ${id_prefix}_ratgdo_ota
+  - platform: web_server
+    id: ${id_prefix}_ratgdo_ota_ws
+
+sensor:
+  - platform: ratgdo
+    id: ${id_prefix}_openings
+    type: openings
+    entity_category: diagnostic
+    name: "Openings"
+    unit_of_measurement: "openings"
+    icon: mdi:open-in-app
+
+  - platform: ratgdo
+    id: ${id_prefix}_paired_devices_total
+    type: paired_devices_total
+    entity_category: diagnostic
+    name: "Paired Devices"
+    icon: mdi:remote
+
+lock:
+  - platform: ratgdo
+    id: ${id_prefix}_lock_remotes
+    name: "Lock remotes"
+
+switch:
+  - platform: ratgdo
+    id: "${id_prefix}_learn"
+    type: learn
+    name: "Learn"
+    icon: mdi:plus-box
+    entity_category: config
+
+binary_sensor:
+  - platform: ratgdo
+    type: motion
+    id: ${id_prefix}_motion
+    name: "Motion"
+    device_class: motion
+
+  - platform: ratgdo
+    type: obstruction
+    id: ${id_prefix}_obstruction
+    name: "Obstruction"
+    device_class: problem
+
+  - platform: ratgdo
+    type: button
+    id: ${id_prefix}_button
+    name: "Button"
+    entity_category: diagnostic
+
+  - platform: ratgdo
+    type: motor
+    id: ${id_prefix}_motor
+    name: "Motor"
+    device_class: running
+    entity_category: diagnostic
+
+number:
+  - platform: ratgdo
+    id: ${id_prefix}_rolling_code_counter
+    type: rolling_code_counter
+    entity_category: config
+    name: "Rolling code counter"
+    mode: box
+    unit_of_measurement: "codes"
+
+  - platform: ratgdo
+    id: ${id_prefix}_opening_duration
+    type: opening_duration
+    entity_category: config
+    name: "Opening duration"
+    unit_of_measurement: "s"
+
+  - platform: ratgdo
+    id: ${id_prefix}_closing_duration
+    type: closing_duration
+    entity_category: config
+    name: "Closing duration"
+    unit_of_measurement: "s"
+
+  - platform: ratgdo
+    id: ${id_prefix}_client_id
+    type: client_id
+    entity_category: config
+    name: "Client ID"
+    mode: box
+
+cover:
+  - platform: ratgdo
+    id: ${id_prefix}_garage_door
+    device_class: garage
+    name: "Door"
+
+light:
+  - platform: ratgdo
+    id: ${id_prefix}_light
+    name: "Light"
+
+button:
+  - platform: restart
+    id: ${id_prefix}_restart
+    name: "Restart"
+
+  - platform: safe_mode
+    id: ${id_prefix}_safe_mode
+    name: "Safe mode boot"
+    entity_category: diagnostic
+
+  - platform: template
+    id: ${id_prefix}_query_status
+    entity_category: diagnostic
+    name: "Query status"
+    on_press:
+      then:
+        lambda: !lambda |-
+          id($id_prefix).query_status();
+
+  - platform: template
+    id: ${id_prefix}_query_openings
+    name: "Query openings"
+    entity_category: diagnostic
+    on_press:
+      then:
+        lambda: !lambda |-
+          id($id_prefix).query_openings();
+
+  - platform: template
+    id: ${id_prefix}_sync
+    name: "Sync"
+    entity_category: diagnostic
+    on_press:
+      then:
+        lambda: !lambda |-
+          id($id_prefix).sync();
+
+  - platform: template
+    id: ${id_prefix}_toggle_door
+    name: "Toggle door"
+    on_press:
+      then:
+        lambda: !lambda |-
+          id($id_prefix).door_toggle();

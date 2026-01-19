@@ -1,0 +1,50 @@
+---
+substitutions:
+  id_prefix: ratgdov25
+  friendly_name: "RATGDOv2.5"
+  uart_tx_pin: D1
+  uart_rx_pin: D2
+  input_obst_pin: D7
+
+web_server:
+
+esphome:
+  name: ${id_prefix}
+  friendly_name: ${friendly_name}
+  name_add_mac_suffix: true
+  min_version: 2025.12.0
+  project:
+    name: ratgdo.v25board_esp32_secplus2_nodry
+    version: "2.5"
+
+esp32:
+  board: wemos_d1_mini32
+  framework:
+    type: arduino
+
+dashboard_import:
+  package_import_url: github://ratgdo/esphome-ratgdo/v25board_esp32_d1_mini_nodry.yaml@main
+
+packages:
+  remote_package:
+    url: https://github.com/ratgdo/esphome-ratgdo
+    files: [base_nodry.yaml]
+    refresh: 1s
+
+# Sync time with Home Assistant.
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+
+api:
+  id: api_server
+
+improv_serial:
+
+esp32_improv:
+  authorizer: none
+
+wifi:
+  ap:
+
+logger:
